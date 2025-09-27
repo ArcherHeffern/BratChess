@@ -6,9 +6,6 @@ import { useState } from 'react';
 const WHITE = "white"
 const BLACK = "black"
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const PROMOTION_POSITION = '8/P7/7K/8/8/8/8/k7 w - - 0 1'
-
 const BOARD = new Chess(DEFAULT_POSITION)
 const BOT_MOVE_DELAY = 250
 function App() {
