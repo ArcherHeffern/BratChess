@@ -9,8 +9,6 @@ const BLACK = "black"
 // GameState
 const NOT_STARTED = "not_started"
 const PLAYING = "playing"
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const ENDED = "ended"
 
 const COLUMN: CSSProperties = {
   width: '30vw',
