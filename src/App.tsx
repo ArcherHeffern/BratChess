@@ -1,27 +1,68 @@
 import { Chessboard, chessColumnToColumnIndex, defaultPieces, type PieceDropHandlerArgs, type PieceHandlerArgs, type PieceRenderObject } from 'react-chessboard';
 import './App.css'
 import { Chess, DEFAULT_POSITION, type PieceSymbol, type Square } from 'chess.js';
-import { useState } from 'react';
+import { useState, type CSSProperties} from 'react';
 
 const WHITE = "white"
 const BLACK = "black"
+
+// GameState
+const NOT_STARTED = "not_started"
+const PLAYING = "playing"
+const ENDED = "ended"
+
+const COLUMN: CSSProperties = {
+  width: '30vw',
+  display: 'flex',
+  flexDirection: 'column'
+}
+
 
 const BOARD = new Chess(DEFAULT_POSITION)
 const BOT_MOVE_DELAY = 250
 function App() {
 
+  const [gameState, setGameState] = useState<string>(NOT_STARTED)
   const [playerColor, setPlayerColor] = useState<"white" | "black">(WHITE)
   const [playerToMove, setPlayerToMove] = useState(true)
   const [promotionMove, setPromotionMove] = useState<Omit<PieceDropHandlerArgs, 'piece'> | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
-  const onPieceDrop = ({
-    sourceSquare,
-    targetSquare,
-  }: PieceDropHandlerArgs) => {
+  function handleDeficit(): boolean {
+    // Bool: if we made the move
+    if (botAtMaterialDeficit()) {
+      if (BOARD.inCheck()) {
+        BOARD.undo()
+        setMsg("Illegal move. Cannot simultaniously create material deficit and put opponent in check.")
+        return false;
+      } else {
+        BOARD.setTurn((playerColor === WHITE ? "w" : "b"))
+        setPlayerColor(playerColor === WHITE ? BLACK : WHITE)
+        return true;
+      }
+    }
+    return true;
+  }
+  const onPieceDrop = (
+    x: PieceDropHandlerArgs
+  ) => {
+    setGameState(PLAYING);
     if (!playerToMove) {
       return false;
     }
+    setMsg(null);
+    if (_onPieceDrop(
+      x
+    )) {
+      setPlayerToMove(false)
+      return true;
+    }
+    return false;
+  }
+  const _onPieceDrop = ({
+    sourceSquare,
+    targetSquare,
+  }: PieceDropHandlerArgs) => {
     if (targetSquare === null) {
       return false;
     }
@@ -38,37 +79,25 @@ function App() {
           sourceSquare,
           targetSquare
         });
+        return true;
       }
 
-      // return true so that the promotion move is not animated
-      // the downside to this is that any other moves made first will not be animated and will reset our move to be animated again e.g. if you are premoving a promotion move and the opponent makes a move afterwards
-      return true;
     }
     try {
-      BOARD.move({ from: sourceSquare, to: targetSquare, promotion: 'q' })
+      BOARD.move({ from: sourceSquare, to: targetSquare })
     } catch {
-      console.log("Invalid Move")
+      ;
+    }
+
+    if (!handleDeficit()) {
       return false;
     }
 
-    if (botAtMaterialDeficit()) {
-      if (BOARD.inCheck()) {
-        BOARD.undo()
-        setMsg("Illegal move. Cannot simultaniously create material deficit and put opponent in check.")
-        return false;
-      } else {
-        BOARD.setTurn((playerColor === WHITE?"w":"b"))
-        setPlayerColor(playerColor === WHITE ? BLACK : WHITE)
-      }
-    }
-
-    setMsg(null);
     if (BOARD.isGameOver()) {
       handleGameOver()
       return true;
     }
 
-    setPlayerToMove(false)
     setTimeout(botMove, BOT_MOVE_DELAY);
 
     return true;
@@ -84,9 +113,14 @@ function App() {
       to: promotionMove!.targetSquare as Square,
       promotion: piece
     });
+    setPromotionMove(null);
+
+    if (!handleDeficit()) {
+      BOARD.undo();
+      return;
+    }
 
     setPlayerToMove(true);
-    setPromotionMove(null);
   }
 
   // calculate the left position of the promotion square
@@ -130,7 +164,7 @@ function App() {
       return false;
     }
     return (points > 0 && playerColor === WHITE)
-    || (points < 0 && playerColor === BLACK);
+      || (points < 0 && playerColor === BLACK);
   }
 
   function botMove() {
@@ -160,64 +194,91 @@ function App() {
     showAnimations: true,
   };
 
-  return <div style={{
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1rem',
-    alignItems: 'center',
-    width: '80vh',
-  }}>
-    {promotionMove ? <div onClick={() => setPromotionMove(null)} onContextMenu={e => {
-      e.preventDefault();
-      setPromotionMove(null);
-    }} style={{
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.1)',
-      zIndex: 1000
-    }} /> : null}
+  if (gameState === NOT_STARTED) {
+    return (
+      <>
+        <button onClick={() => {
+          setPlayerColor(WHITE)
+          setGameState(PLAYING)
+        }}>WHITE</button>
+        <button onClick={() => {
+          setPlayerToMove(false)
+          setPlayerColor(BLACK)
+          setGameState(PLAYING)
+          setTimeout(botMove, BOT_MOVE_DELAY)
+        }}>BLACK</button>
+      </>
+    )
+  }
 
-    {promotionMove ? <div style={{
-      position: 'absolute',
-      top: 0,
-      left: promotionSquareLeft,
-      backgroundColor: 'white',
-      width: squareWidth,
-      zIndex: 1001,
+  return <div style={{
+    display: 'flex', flexDirection: 'row', justifyContent: "space-between"
+  }}>
+    <div style={COLUMN}>
+      <p>Debugging</p>
+      <button onClick={() => console.log(BOARD.fen())}>Get Fen</button>
+      <button onClick={() => {
+        BOARD.reset()
+        setGameState(NOT_STARTED)
+        setPlayerColor("white");
+        setPlayerToMove(true);
+        setPromotionMove(null);
+        setMsg(null);
+      }}>Reset</button>
+    </div>
+    <div style={{
       display: 'flex',
       flexDirection: 'column',
-      boxShadow: '0 0 10px 0 rgba(0, 0, 0, 0.5)'
+      gap: '1rem',
+      alignItems: 'center',
+      width: '80vh',
     }}>
-      {(['q', 'r', 'n', 'b'] as PieceSymbol[]).map(piece => <button key={piece} onClick={() => {
-        onPromotionPieceSelect(piece);
-      }} onContextMenu={e => {
+      {promotionMove ? <div onClick={() => setPromotionMove(null)} onContextMenu={e => {
         e.preventDefault();
+        setPromotionMove(null);
       }} style={{
-        width: '100%',
-        aspectRatio: '1',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 0,
-        border: 'none',
-        cursor: 'pointer'
-      }}>
-        {defaultPieces[`w${piece.toUpperCase()}` as keyof PieceRenderObject]()}
-      </button>)}
-    </div> : null}
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.1)',
+        zIndex: 1000
+      }} /> : null}
 
-    <p style={{height: '50px'}}>{msg}</p>
-    <Chessboard options={chessboardOptions} />
-    <button onClick={() => {
-      BOARD.reset()
-      setPlayerColor("white");
-      setPlayerToMove(true);
-      setPromotionMove(null);
-      setMsg(null);
-    }}>Reset</button>
+      {promotionMove ? <div style={{
+        position: 'absolute',
+        top: 0,
+        left: promotionSquareLeft,
+        backgroundColor: 'white',
+        width: squareWidth,
+        zIndex: 1001,
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '0 0 10px 0 rgba(0, 0, 0, 0.5)'
+      }}>
+        {(['q', 'r', 'n', 'b'] as PieceSymbol[]).map(piece => <button key={piece} onClick={() => {
+          onPromotionPieceSelect(piece);
+        }} onContextMenu={e => {
+          e.preventDefault();
+        }} style={{
+          width: '100%',
+          aspectRatio: '1',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 0,
+          border: 'none',
+          cursor: 'pointer'
+        }}>
+          {defaultPieces[`w${piece.toUpperCase()}` as keyof PieceRenderObject]()}
+        </button>)}
+      </div> : null}
+
+      <p style={{ height: '50px' }}>{msg}</p>
+      <Chessboard options={chessboardOptions} />
+    </div>
+    <div style={COLUMN}></div>
   </div>
 }
 
