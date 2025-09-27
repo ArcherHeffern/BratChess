@@ -38,6 +38,21 @@ jobs:
       - name: Build
         run: npm run build
 
+      # --- Debug: prove we're shipping the compiled HTML ---
+      - name: Show dist tree
+        run: ls -lah dist && echo && ls -lah dist/assets || true
+
+      - name: Show top of dist/index.html
+        run: sed -n '1,80p' dist/index.html || true
+
+      - name: Fail if unbuilt entry tag is present
+        run: |
+          if grep -q "/src/main.tsx" dist/index.html; then
+            echo "ERROR: dist/index.html still references /src/main.tsx (unbuilt)."
+            exit 1
+          fi
+        shell: bash
+      # --- End debug ---
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
