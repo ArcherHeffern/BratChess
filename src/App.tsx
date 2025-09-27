@@ -87,7 +87,7 @@ function App() {
     try {
       BOARD.move({ from: sourceSquare, to: targetSquare })
     } catch {
-      ;
+      return false;
     }
 
     if (!handleDeficit()) {
