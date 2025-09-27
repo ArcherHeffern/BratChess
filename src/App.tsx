@@ -21,7 +21,6 @@ function App() {
   const onPieceDrop = ({
     sourceSquare,
     targetSquare,
-    piece,
   }: PieceDropHandlerArgs) => {
     if (!playerToMove) {
       return false;
@@ -61,7 +60,7 @@ function App() {
         setMsg("Illegal move. Cannot simultaniously create material deficit and put opponent in check.")
         return false;
       } else {
-        BOARD.setTurn((playerColor[0]))
+        BOARD.setTurn((playerColor === WHITE?"w":"b"))
         setPlayerColor(playerColor === WHITE ? BLACK : WHITE)
       }
     }
