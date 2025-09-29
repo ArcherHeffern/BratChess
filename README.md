@@ -7,6 +7,10 @@ Whenever they are materially disadvantaged, they ask to switch sides.
 
 Good luck!
 
+## Caviats
+- You cannot create a material disadvantage, while putting the opponent in check. This is because the sides would switch, and the bot can immediately capture your King
+- It would be impossible to win against a bot trained on this mode. Thus, to keep things fun, we use a regular chess bot, and occasionally make it *blunder*
+
 # Usage
 1. Clone the directory
 2. cd into the cloned directory
