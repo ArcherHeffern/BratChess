@@ -1,4 +1,5 @@
 # Bratty Chess
+<img width="1032" height="692" alt="Screenshot 2025-09-29 at 2 09 48 AM" src="https://github.com/user-attachments/assets/5339756d-cd21-4987-b6e7-500d1aa1fba9" />
 
 Your opponent is a brat. 
 
